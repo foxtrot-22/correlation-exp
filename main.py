@@ -1,12 +1,13 @@
-import pandas as pd
-from sklearn.datasets import load_diabetes
-import seaborn as sns
-import matplotlib.pyplot as plt
+#!/usr/bin/env python3
+from local_file_picker import local_file_picker
 
- 
-# Load the dataset with frame
-df = load_diabetes(as_frame=True)
-# conver into pandas dataframe
-df = df.frame
-# Print first 5 rows
-print(df.head())
+from nicegui import ui
+
+
+async def pick_file() -> None:
+    result = await local_file_picker('~', multiple=True)
+    ui.notify(f'You chose {result}')
+
+ui.button('Choose file', on_click=pick_file, icon='folder')
+
+ui.run()
