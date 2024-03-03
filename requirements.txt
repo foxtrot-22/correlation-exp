@@ -1,0 +1,5 @@
+nicegui
+pandas
+scikit-learn
+seaborn
+matplotlib
