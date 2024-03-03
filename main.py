@@ -6,6 +6,7 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype,is_bool_dtype
 import random
 
+df = pd.DataFrame()
 
 async def pick_file() -> None:
     result = await local_file_picker('~', multiple=True)
@@ -17,7 +18,9 @@ async def pick_file() -> None:
 
 ui.button('Choose file', on_click=pick_file, icon='folder')
 
+
 file_choice_label = ui.label('Chosen File')
+
 
 def read_file() -> None:
 
@@ -27,60 +30,32 @@ def read_file() -> None:
 
     
     if file_choice.endswith('.csv'):
+        global df
         # read the result of the file picker as a pandas dataframe
         df = pd.read_csv(file_choice)
-        print(df.head())
+        update()
+        #print(df.head())
+        
     else:
         ui.notify("Please choose a csv file")
     
-    return(df)
+    #return(df)
 
-ui.button('Read file', icon='dataset', on_click=read_file)
+#ui.button('Read file', icon='dataset', on_click=read_file)
+
+def update():
+    table_container.clear()
+    with table_container:
+        ui.aggrid.from_pandas(df)
+        print(df.head())
 
 ui.label('Dataframe')
 
+with ui.element().classes("w-full") as table_container:
+    ui.aggrid.from_pandas(df).style("width: 50%;")
+ui.button('Read file', icon='dataset', on_click=read_file)
+#ui.button('Update', on_click=update)
 
 
-#ui.aggrid(df)
-#df = pd.DataFrame(data={'col1': [], 'col2': []})
-grid = ui.aggrid(
-    {
-        "defaultColDef": {"flex": 1},
-        "columnDefs": [
-            {"headerName": "Name", "field": "name"},
-            {"headerName": "Age", "field": "age"},
-            {"headerName": "Parent", "field": "parent", "hide": True},
-        ],
-        "rowData": [],
-        "rowSelection": "multiple",
-    }
-).classes("max-h-40")
-
-class App:
-    def __init__(self):
-        self.rows = []
-
-    def update(self, df):
-        self.rows.clear()
-        self.rows.extend(df.to_dict("records"))
-
-
-app = App()
-grid.options["rowData"] = app.rows
-
-
-def update():
-    df = pd.DataFrame(
-        [
-            {"name": "Alice", "age": random.random(), "parent": "David"},
-            {"name": "Bob", "age": random.random(), "parent": "Eve"},
-            {"name": "Carol", "age": random.random(), "parent": "Frank"},
-        ]
-    )
-    app.update(df)
-    grid.update()
-
-
-ui.button("Update", on_click=update)
 
 ui.run()
