@@ -128,6 +128,7 @@ vis_tgt_columns = ui.select([''], value='',label='Select Target Columns', multip
 # show the columns from the corr dataframe
 def show_columns() -> None:
     # get the columns from the correlation dataframe
+    #
     column_list = list(corr.columns)
     ex_column_list = list(corr.columns)
     # update the dropdown
@@ -215,7 +216,7 @@ def visualise() -> None:
             value = corr.loc[source_column, column]
             #value = corr_norm.loc[source_column, column]
             # added + 5 to get them above 0
-            value = int(value*10)+1
+            value = int(value*10)+2
 
             # display negative correlations in red            
             if value == 1:
