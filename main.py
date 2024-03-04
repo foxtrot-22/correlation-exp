@@ -4,7 +4,7 @@ from local_file_picker import local_file_picker
 from nicegui import ui, Tailwind
 import pandas as pd
 from pandas.api.types import is_numeric_dtype,is_bool_dtype
-import random
+from random import random
 
 # Setup heading
 ui.label('Correlation Analysis').tailwind.font_weight('extrabold').font_size('xl')
@@ -77,10 +77,15 @@ correlation_method = ui.select(options=['pearson', 'kendall', 'spearman'], value
 
 # calculate the correlation on df
 def calculate_correlation() -> None:
+    global corr
+
     # get the correlation method
     method = correlation_method.value
     # calculate the correlation
     corr = df.corr(method=method)
+
+    #print(num_vis_columns)    
+    show_columns()
     # clear the container
     correlation_results.clear()
     with correlation_results:
@@ -102,5 +107,57 @@ ui.separator()
 # create a label for the visualiser
 ui.label('Visualiser').tailwind.font_weight('extrabold')
 
+# create a dropdown from the list of columns in the correlation dataframe
+#column_list = list(corr.columns)
+
+# count hte number of columns
+#with ui.row():
+vis_columns = ui.select([''], value='',label='Select Source Column').style("width: 15%;")
+    #vis_inc_columns = ui.select(options=[''], value='', label='Select Target Columns', multiple=True)
+
+vis_tgt_columns = ui.select([''], value='',label='Select Target Column', multiple=True).style("width: 15%;")
+
+# show the columns from the corr dataframe
+def show_columns() -> None:
+    # get the columns from the correlation dataframe
+    column_list = list(corr.columns)
+    ex_column_list = list(corr.columns)
+    # update the dropdown
+    vis_columns.set_options(column_list, value=column_list[0])
+    vis_tgt_columns.set_options(column_list, value=column_list[0])
+
+#ui.button('Update Vis Options', on_click=show_columns)
+
+def visualise() -> None:
+    # get the source column
+    source_column = vis_columns.value
+    # get the target columns
+    target_columns = vis_tgt_columns.value
+    print(source_column)
+    print(target_columns)
+
+ui.button('Visualise', on_click=visualise, icon='analytics')
+    # get the number of target columns
+
+
+
+
+echart = ui.echart({
+    'xAxis': {'type': 'value'},
+    'yAxis': {'type': 'category', 'data': ['A', 'B'], 'inverse': True},
+    'legend': {'textStyle': {'color': 'gray'}},
+    'series': [
+        {'type': 'bar', 'name': 'Alpha', 'data': [0.1, 0.2]},
+        {'type': 'bar', 'name': 'Beta', 'data': [0.3, 0.4]},
+    ],
+})
+
+def chart_update():
+    echart.options['series'][0]['data'][0] = random()
+    echart.update()
+
+ui.button('Update', on_click=chart_update)
+#with ui.row():
+#    ui.button('Update Vis Options', on_click=lambda: vis_colums.set_options([4,5,6], value=4))
 
 ui.run()
