@@ -6,6 +6,10 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype,is_bool_dtype
 from random import random
 
+import json
+# import preprocessing from sci-kit learn
+from sklearn import preprocessing
+
 # Setup heading
 ui.label('Correlation Analysis').tailwind.font_weight('extrabold').font_size('xl')
 
@@ -14,6 +18,10 @@ df = pd.DataFrame()
 
 # setup an empty dataframe for the correlation
 corr = pd.DataFrame()
+
+# Setup empty lists for chart_container
+chartdata = [{}]
+chartlinks=[{}]
 
 # create async func to wait while we pick a file
 async def pick_file() -> None:
@@ -115,7 +123,7 @@ ui.label('Visualiser').tailwind.font_weight('extrabold')
 vis_columns = ui.select([''], value='',label='Select Source Column').style("width: 15%;")
     #vis_inc_columns = ui.select(options=[''], value='', label='Select Target Columns', multiple=True)
 
-vis_tgt_columns = ui.select([''], value='',label='Select Target Column', multiple=True).style("width: 15%;")
+vis_tgt_columns = ui.select([''], value='',label='Select Target Columns', multiple=True).style("width: 15%;")
 
 # show the columns from the corr dataframe
 def show_columns() -> None:
@@ -126,38 +134,160 @@ def show_columns() -> None:
     vis_columns.set_options(column_list, value=column_list[0])
     vis_tgt_columns.set_options(column_list, value=column_list[0])
 
-#ui.button('Update Vis Options', on_click=show_columns)
+
+
+with ui.element().classes("w-full") as chart_container:
+    echart = ui.echart({
+    "title": {"text": 'Correlation Visualisation', "subtext": 'Correlation Visualisation of the selected columns'},
+    "tooltip": {},
+    "animationDurationUpdate": 1500,
+    "animationEasingUpdate": 'quinticInOut',
+    "series": [
+        {
+        "type": 'graph',
+        #"layout": 'force',
+        "layout": 'circular',
+        "animation": False,
+        "symbolSize": 50,
+        "roam": True,
+        "draggable": True,
+        "force": {
+            "initLayout": 'circular',
+            "repulsion": 20,
+            #"gravity": 0.2,
+            "edgeLength": 300
+            },
+        "label": {
+            "show": True
+        },
+        "edgeSymbol": ['circle', 'arrow'],
+        "edgeSymbolSize": [4, 10],
+        "edgeLabel": {
+            "fontSize": 20
+        },
+        "data": chartdata,
+
+        "links": chartlinks,
+        "lineStyle": {
+        "opacity": 0.9,
+        "width": 2,
+        "curveness": 0
+        }
+    }
+    ]
+    }
+    ).style("width: 100%; height: 600px;")
+    
+
 
 def visualise() -> None:
+    
     # get the source column
     source_column = vis_columns.value
     # get the target columns
     target_columns = vis_tgt_columns.value
-    print(source_column)
-    print(target_columns)
+    
+    # check that target columns is not an empty list or that its not the same as source_column
+    if len(target_columns) == 0 or source_column in target_columns:
+        ui.notify("Please select more target columns")
+        return
+    else:
+        chartdata = []
+        # add the source column to the chart data
+        chartdata.append({"name": source_column})
+        # add the target columns to the chart data
+        for column in target_columns:
+            chartdata.append({"name": column})
+
+        # now lets generate the links
+        chartlinks = []
+
+        #Lets normalise the dataframe to make the differences bigger
+        # This was just a test - doesn't account for -ve due to the abs calc
+        corr_norm = corr.abs().apply(lambda x: x/x.max(), axis=0)
+        x = corr.values
+        min_max_scaler = preprocessing.MinMaxScaler()
+        x_scaled = min_max_scaler.fit_transform(x)
+        corr_norm = pd.DataFrame(x_scaled, columns=corr.columns, index=corr.index)
+        print(chartdata)
+        for column in target_columns:
+            # get the intersection value of the source and target columns from the corr dataframe
+            value = corr.loc[source_column, column]
+            #value = corr_norm.loc[source_column, column]
+            # added + 5 to get them above 0
+            value = int(value*10)+1
+
+            # display negative correlations in red            
+            if value == 1:
+                color = "#ff0000"
+            else:
+                color = "#000"
+            
+            chartlinks.append({
+                "source": source_column,
+                "target": column,
+                "label":{
+                    "show":True,
+                    "formatter": str(value)
+                },
+                "symbolSize":[5,20],
+                "lineStyle":{
+                    "width":value,
+                    "curveness": 0.3,
+                    "color": f"{color}"
+                    }
+                
+                })
+        
+        # now we have some json/dict issues so replace all the quotes with double quotes
+        # ok so the list elements are all dicts so we need to use json
+        
+        def replace_quotes(obj):
+            if isinstance(obj, dict):
+                return {k: replace_quotes(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [replace_quotes(elem) for elem in obj]
+            elif isinstance(obj, str):
+                return obj.replace("'", "\"")
+            else:
+                return obj
+            
+        chartlinks=replace_quotes(chartlinks)
+        
+        chart_container.clear()
+        with chart_container:
+            echart = ui.echart({
+                "title": {"text": 'Correlation Visualisation', "subtext": 'Correlation Visualisation of the selected columns'},
+                "tooltip": {},
+                "animationDurationUpdate": 1500,
+                "animationEasingUpdate": 'quinticInOut',
+                "series": [{
+                        "type": 'graph',
+                        #"layout": 'none',
+                        "draggable": True,
+                        "layout": 'circular',
+                        "symbolSize": 50,
+                        "roam": True,
+                        "label": {
+                            "show": True
+                        },
+                        "edgeSymbol": ['circle', 'arrow'],
+                        "edgeSymbolSize": [4, 10],
+                        "edgeLabel": {
+                            "fontSize": 20
+                        },
+                        "data": chartdata,
+                        "links": chartlinks,
+                        "lineStyle": {
+                            "opacity": 0.9,
+                            "width": 2,
+                            "curveness": 0
+                        }
+                    }
+                ]
+            }).style("width: 100%; height: 250px;")
+
 
 ui.button('Visualise', on_click=visualise, icon='analytics')
-    # get the number of target columns
-
-
-
-
-echart = ui.echart({
-    'xAxis': {'type': 'value'},
-    'yAxis': {'type': 'category', 'data': ['A', 'B'], 'inverse': True},
-    'legend': {'textStyle': {'color': 'gray'}},
-    'series': [
-        {'type': 'bar', 'name': 'Alpha', 'data': [0.1, 0.2]},
-        {'type': 'bar', 'name': 'Beta', 'data': [0.3, 0.4]},
-    ],
-})
-
-def chart_update():
-    echart.options['series'][0]['data'][0] = random()
-    echart.update()
-
-ui.button('Update', on_click=chart_update)
-#with ui.row():
-#    ui.button('Update Vis Options', on_click=lambda: vis_colums.set_options([4,5,6], value=4))
 
 ui.run()
