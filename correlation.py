@@ -14,3 +14,4 @@ df.to_csv('diabetes.csv', index=False)
 # Print first 5 rows
 corr = df.corr(method='pearson')
 print(corr)
+
