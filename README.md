@@ -8,3 +8,5 @@ Activate the environment
 - .\env\scripts\activate.bat
 Install requirements
 - pip install -r requirements.txt
+
+## Added the new branch
